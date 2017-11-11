@@ -1,0 +1,100 @@
+{% extends "layout.html" %}
+
+{% block body %}
+    <p> Yeelight WiFi LED device</p>
+    <p>Aktoren {{ test }}</p>
+
+    <form action="/ssdp" method="POST">
+        <button type="submit" class="btn btn-outline-primary" name="ssdp" >ssdp uPnp</button>
+    </form>
+
+    <form action="/" method="POST">
+    <button type="button" class="btn btn-outline-primary" name="start_cf" >start_cf</button>
+    <button type="button" class="btn btn-outline-secondary" name="set_ct_abx" >set_ct_abx</button>
+    <button type="submit" class="btn btn-outline-success" name="set_rgb" value="rgbgeklickt">set_rgb</button>
+    <button type="button" class="btn btn-outline-danger" name="set_hsv" >set_hsv</button>
+    <button type="button" class="btn btn-outline-warning" name="set_bright" >set_bright</button>
+    <button type="submit" class="btn btn-outline-info" name="set_power" value="geklickt">set_power</button>
+    <button type="submit" class="btn btn-outline-light" name="toggle" value="toogleklick">toggle</button>
+    <button type="button" class="btn btn-outline-dark" name="set_default" >set_default</button>
+
+    <table class="table table-bordered table-dark">
+      <thead>
+        <tr>
+          <th scope="col">#</th>
+          <th scope="col">Befehl</th>
+          <th scope="col">Wert</th>
+          <th scope="col">Einstellen</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row">1</th>
+          <td>power</td>
+          <td>{{ power }}</td>
+          <td><div class="col-lg-6">
+    <div class="input-group">
+      <span class="input-group-addon">
+        <input type="radio" aria-label="Radio button for following text input">
+      </span>
+      <input type="text" name="powertext" placeholder="{{ power }}" class="list-group-item list-group-item-action l" aria-label="Text input with radio button">
+    </div>
+  </div></td>
+        </tr>
+        <tr>
+          <th scope="row">2</th>
+          <td>bright</td>
+          <td>11</td>
+          <td><div class="col-lg-6">
+    <div class="input-group">
+      <span class="input-group-addon">
+        <input type="radio" aria-label="Radio button for following text input">
+      </span>
+      <input type="text" class="list-group-item list-group-item-action " aria-label="Text input with radio button">
+    </div>
+  </div></td>
+        </tr>
+        <tr>
+          <th scope="row">3</th>
+          <td>ct</td>
+          <td>5</td>
+          <td><div class="col-lg-6">
+    <div class="input-group">
+      <span class="input-group-addon">
+        <input type="radio" aria-label="Radio button for following text input">
+      </span>
+      <input type="text" class="list-group-item list-group-item-action l" aria-label="Text input with radio button">
+    </div>
+  </div></td>
+        </tr>
+        <tr>
+          <th scope="row">4</th>
+          <td >rgb</td>
+          <td >{{ rgb }}</td>
+          <td><div class="col-lg-6">
+    <div class="input-group">
+      <span class="input-group-addon">
+        <input type="radio" aria-label="Radio button for following text input">
+      </span>
+      <input type="text" name="rgbtext" placeholder="{{ rgb }}" class="list-group-item list-group-item-action " aria-label="Text input with radio button">
+    </div>
+  </div></td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+    <p>Antwort: {{response}}</p>
+    <p>Sensoren</p>
+    <button type="button" class="btn btn-outline-primary">get_prop</button>
+    <button type="button" class="btn btn-outline-secondary">cron_get</button>
+    <!-- button type="button" class="btn btn-outline-success">set_rgb</button>
+    <button type="button" class="btn btn-outline-danger">set_hsv</button>
+    <button type="button" class="btn btn-outline-warning">set_bright</button>
+    <button type="button" class="btn btn-outline-info">set_power</button>
+    <button type="button" class="btn btn-outline-light">toggle</button>
+    <button type="button" class="btn btn-outline-dark">set_default</button --!>
+
+    <input type="submit" value="abschicken"/>
+    </form>
+
+{% endblock %}
