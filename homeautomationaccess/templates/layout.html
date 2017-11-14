@@ -7,8 +7,34 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" >
     <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <!-- link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" --!>
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon" />
     <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon" />
+
+<style>
+{{ super() }}
+.input-group-addon {
+    padding: .0rem .0rem;
+    margin-bottom: 0;
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.5;
+    color: #495057;
+    text-align: center;
+    background-color: #e9ecef;
+    border: 1px solid #ced4da;
+    border-radius: .25rem;
+}
+.list-group-item {
+    position: relative;
+    display: block;
+    padding: .01rem 1.1rem;
+    margin-bottom: -1px;
+    background-color: #fff;
+    border: 1px solid rgba(0,0,0,.125);
+}
+
+</style>
 {% endblock %}
 
 {% block title %}Flasky{% endblock %}

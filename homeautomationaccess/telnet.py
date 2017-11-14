@@ -167,14 +167,65 @@ def processRequest(req):
 #
 @app.route('/', methods=['GET', 'POST'])
 def index():
+    paramnames = {"power":"on",
+                  "bright":100,
+                  "ct":1700,
+                  "rgb":16777215,
+                  "hue":359,
+                  "sat":100,
+                  "color_mode":1,
+                  "flowing":1,
+                  "delayoff":60,
+                  "flow_params":2,
+                  "music_on":0,
+                  "name":"yeelight",
+                  "bg_power":0,
+                  "bg_flowing":"off",
+                  "bg_flow_params":"off",
+                  "bg_ct":0,
+                  "bg_lmode":2,
+                  "bg_bright":100,
+                  "bg_rgb":12777,
+                  "bg_hue":2,
+                  "bg_sat":100,
+                  "nl_br":100}
+    '''
+    Property Name Possible value
+    power on: smart LED is turned on  /  off: smart LED is turned off
+    bright Brightness percentage. Range 1 ~ 100
+    ct Color temperature. Range 1700 ~ 6500(k)
+    rgb Color. Range 1 ~ 16777215
+    hue Hue. Range 0 ~ 359
+    sat Saturation. Range 0 ~ 100
+    color_mode 1: rgb mode   /   2: color temperature mode / 3: hsv mode
+    flowing 0: no flow is running  /  1:color flow is running
+    delayoff The remaining time of a sleep timer. Range 1 ~ 60 (minutes)
+    flow_params Current flow parameters (only meaningful when 'flowing' is 1)
+    music_on 1: Music mode is on / 0: Music mode is off
+    name The name of the device set by “set_name” command
+    bg_power Background light power status
+    bg_flowing Background light is flowing
+    bg_flow_params Current flow parameters of background light
+    bg_ct Color temperature of background light
+    bg_lmode 1: rgb mode   /   2: color temperature mode / 3: hsv mode
+    bg_bright Brightness percentage of background light
+    bg_rgb Color of background light
+    bg_hue Hue of background light
+    bg_sat Saturation of background light
+    nl_br Brightness of night mode light 
+
+    '''
+
     # values containing device states:
     power       = 0
     rgb         = 0
+    ct_value    = 0
     # following button-states contain str "pressed" or None
     get_prop    = request.form.get("get_prop")
     set_power   = request.form.get("set_power")
     set_rgb     = request.form.get("set_rgb")
     toggle      = request.form.get("toggle")
+    set_ct_abx  = request.form.get("set_ct_abx")
     response    = ""   # contains the return str sent back by the device
         
     if request.method == "POST":
@@ -183,7 +234,8 @@ def index():
         power = request.form.get("powertext")
         rgb = request.form.get("rgbtext")
 
-    print("Buttons+Texts:", set_power, power, set_rgb, rgb, toggle)
+    print("get_prop:", get_prop)
+    #print("Buttons+Texts:", set_power, power, set_rgb, rgb, toggle)
     #return "debug" # -- Debug --
 
 
@@ -196,13 +248,47 @@ def index():
     # Response Example:  {"id":1, "result":["on", "", "100"]}
     # NOTE:                          All the supported properties are defined in table 4-2, section 4.3
     if get_prop is not None:
-        print("yeelight power: ", power, " rgb: ", rgb)
-        print(get_prop)
+        params      = ""         # will contain "power", "bright" a.s.o.
+        result      = 0
+        response    = 0
+        resultindex = 0
+        for paramname in paramnames:
+            params += "\"" + paramname + "\","
+        params = params[:-1]    # remove last comma for array-building in command
+        print(params)
+        response = telnettodevice('{"id":1,"method":"get_prop","params":[' + params +']}  \r\n')
+        print("str(response): ", str(response.decode("ascii"))) #.replace("\r\n", "")
+        # b'{"id":1, "result":["off","100","4000","123445","359","100","1","0","0","","0","","","","","","","","","","",""]}\r\n'
+        result = json.loads(str(response.decode("ascii")))  # complete json dictionary
+        result = result.get("result")                       # array of result values
+        print("result: ", result)
+        for paramname in paramnames:                                # "power", "bright" a.s.o
+            resultindex = dictionaryindexof(paramnames, paramname)  # index of "power" in dict
+            paramnames[paramname] = result[resultindex] # e.g. panms["power"] = result[0] = "on"
+        
+        return render_template("main.html", paramnames = paramnames, response = response)
+    
+    # Method:  set_ct_abx
+    # Usage: This method is used to change the color temperature of a smart LED.
+    # Parameters:  3. "ct_value" is the target color temperature.
+    # The type is integer and range is 1700 ~ 6500 (k).
+    # "effect" support two values: "sudden" and "smooth".
+    # If effect is "sudden", then the color temperature will be changed directly to target value,
+    # under this case, the third parameter "duration" is ignored.
+    # If effect is "smooth", then the color temperature will be changed to target value in a gradual fashion,
+    # under this case, the total time of gradual change is specified in third parameter "duration".
+    # "duration" specifies the total time of the gradual changing.
+    # The unit is milliseconds. The minimum support duration is 30 milliseconds.
+    # Request  Example:  {"id":1,"method":"set_ct_abx","params":[3500, "smooth", 500]}
+    # Response Example:  {"id":1, "result":["ok"]} NOTE:
+    # Only accepted if the smart LED is currently in "on" state. if set_ct_abx is not None:
+    if set_ct_abx is not None:
+        print(set_ct_abx)
 
    
     # set_power -----------------------------
     if set_power is not None: #!= "":
-        if "0" != str(power): #request.form["powertext"]:
+        if "0" != str(power) and "off" != str(power): #request.form["powertext"]:
             params = '["on", "smooth", 500]'
         else:
             params = '["off", "smooth", 500]'
@@ -217,7 +303,11 @@ def index():
     if toggle is not None:
         response = telnettodevice('{"id":1,"method":"toggle","params":[]} \r\n')
 
-    return render_template("main.html", power = power, test = set_power, rgb = rgb, response = response)
+    return render_template("main.html", power = power,
+                                        test = set_power,
+                            rgb = rgb,
+                           response = response,
+                           paramnames = paramnames)
 
 # ----------------------------------------
 # -------- telnet TCP to device ----------
@@ -234,6 +324,17 @@ def telnettodevice(writetext = ""):
     telnet.close()
     return response
 
+
+# ----------------------------------------
+# -------- dictionaryindexof -------------
+# get index number of dictionary key -----
+def dictionaryindexof(dictionary, searchkey):
+    index = 0
+    for key in dictionary:
+        if key == searchkey:
+            return index
+        index += 1
+    return -1
 
 # -------- turn on yeelight lamp ----------
 @app.route('/on', methods=['GET', 'POST'])

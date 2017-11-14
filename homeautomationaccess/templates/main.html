@@ -1,14 +1,18 @@
 {% extends "layout.html" %}
 
 {% block body %}
-    <p> Yeelight WiFi LED device</p>
-    <p>Aktoren {{ test }}</p>
 
     <form action="/ssdp" method="POST">
+        Yeelight WiFi LED device  -  Aktoren {{ test }} 
         <button type="submit" class="btn btn-outline-primary" name="ssdp" >ssdp uPnp</button>
     </form>
-
+    
     <form action="/" method="POST">
+    <span class="input-group-addon">
+        <input type="radio" name="effect" value="smooth" aria-label="Radio button for following text input">smooth
+        <input type="radio" name="effect" value="sudden" aria-label="Radio button for following text input">sudden
+        <input type="text" name="smoothduration" value="{{ duration }}" class="list-group-item list-group-item-action l" aria-label="Text input with radio button">
+      </span>
     <button type="button" class="btn btn-outline-primary" name="start_cf" >start_cf</button>
     <button type="button" class="btn btn-outline-secondary" name="set_ct_abx" >set_ct_abx</button>
     <button type="submit" class="btn btn-outline-success" name="set_rgb" value="rgbgeklickt">set_rgb</button>
@@ -18,7 +22,7 @@
     <button type="submit" class="btn btn-outline-light" name="toggle" value="toogleklick">toggle</button>
     <button type="button" class="btn btn-outline-dark" name="set_default" >set_default</button>
 
-    <table class="table table-bordered table-dark">
+    <table class="table table-bordered table-dark table-sm table-hover table-striped">
       <thead>
         <tr>
           <th scope="col">#</th>
@@ -28,64 +32,29 @@
         </tr>
       </thead>
       <tbody>
-        <tr>
-          <th scope="row">1</th>
-          <td>power</td>
-          <td>{{ power }}</td>
-          <td><div class="col-lg-6">
-    <div class="input-group">
-      <span class="input-group-addon">
-        <input type="radio" aria-label="Radio button for following text input">
-      </span>
-      <input type="text" name="powertext" value="{{ power }}" class="list-group-item list-group-item-action l" aria-label="Text input with radio button">
-    </div>
-  </div></td>
-        </tr>
-        <tr>
-          <th scope="row">2</th>
-          <td>bright</td>
-          <td>11</td>
-          <td><div class="col-lg-6">
-    <div class="input-group">
-      <span class="input-group-addon">
-        <input type="radio" aria-label="Radio button for following text input">
-      </span>
-      <input type="text" class="list-group-item list-group-item-action " aria-label="Text input with radio button">
-    </div>
-  </div></td>
-        </tr>
-        <tr>
-          <th scope="row">3</th>
-          <td>ct</td>
-          <td>5</td>
-          <td><div class="col-lg-6">
-    <div class="input-group">
-      <span class="input-group-addon">
-        <input type="radio" aria-label="Radio button for following text input">
-      </span>
-      <input type="text" class="list-group-item list-group-item-action l" aria-label="Text input with radio button">
-    </div>
-  </div></td>
-        </tr>
+        
+    {% for paramname in paramnames %}
         <tr>
           <th scope="row">4</th>
-          <td >rgb</td>
-          <td >{{ rgb }}</td>
+          <td >{{ paramname }}</td>
+          <td >{{ paramnames[paramname] }}</td>
           <td><div class="col-lg-6">
-    <div class="input-group">
-      <span class="input-group-addon">
-        <input type="radio" aria-label="Radio button for following text input">
-      </span>
-      <input type="text" name="rgbtext" value="{{ rgb }}" class="list-group-item list-group-item-action " aria-label="Text input with radio button">
-    </div>
-  </div></td>
+                <div class="input-group">
+                  <span class="input-group-addon">
+                    <input type="radio" name="params" aria-label="Radio button for following text input">
+                  </span>
+                  <input type="text" name="{{ paramname + "text" }}" value="{{ paramnames[paramname] }}" class="list-group-item list-group-item-action " aria-label="Text input with radio button">
+                </div>
+              </div></td>
         </tr>
+        {% endfor %}
+
       </tbody>
     </table>
     </div>
     <p>Antwort: {{response}}</p>
     <p>Sensoren</p>
-    <button type="button" class="btn btn-outline-primary">get_prop</button>
+    <button type="submit" class="btn btn-outline-primary" name="get_prop" value="get_propgeklickt">get_prop</button>
     <button type="button" class="btn btn-outline-secondary">cron_get</button>
     <!-- button type="button" class="btn btn-outline-success">set_rgb</button>
     <button type="button" class="btn btn-outline-danger">set_hsv</button>
