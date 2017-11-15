@@ -79,6 +79,58 @@ hostssdp    = '239.255.255.250'     # search for uPnP device
 port        = 80
 portssdp    = 1982                  # yeelight ssdp-port instead of 1900
 
+paramnames = {"power":"on",
+              "bright":100,
+              "ct":1700,
+              "rgb":16777215,
+              "hue":359,
+              "sat":100,
+              "color_mode":1,
+              "flowing":1,
+              "delayoff":60,
+              "flow_params":2,
+              "music_on":0,
+              "name":"yeelight",
+              "bg_power":0,
+              "bg_flowing":"off",
+              "bg_flow_params":"off",
+              "bg_ct":0,
+              "bg_lmode":2,
+              "bg_bright":100,
+              "bg_rgb":12777,
+              "bg_hue":2,
+              "bg_sat":100,
+              "nl_br":100}
+
+effect      = "smooth"
+duration    = 500
+'''
+Property Name Possible value
+power on: smart LED is turned on  /  off: smart LED is turned off
+bright Brightness percentage. Range 1 ~ 100
+ct Color temperature. Range 1700 ~ 6500(k)
+rgb Color. Range 1 ~ 16777215
+hue Hue. Range 0 ~ 359
+sat Saturation. Range 0 ~ 100
+color_mode 1: rgb mode   /   2: color temperature mode / 3: hsv mode
+flowing 0: no flow is running  /  1:color flow is running
+delayoff The remaining time of a sleep timer. Range 1 ~ 60 (minutes)
+flow_params Current flow parameters (only meaningful when 'flowing' is 1)
+music_on 1: Music mode is on / 0: Music mode is off
+name The name of the device set by “set_name” command
+bg_power Background light power status
+bg_flowing Background light is flowing
+bg_flow_params Current flow parameters of background light
+bg_ct Color temperature of background light
+bg_lmode 1: rgb mode   /   2: color temperature mode / 3: hsv mode
+bg_bright Brightness percentage of background light
+bg_rgb Color of background light
+bg_hue Hue of background light
+bg_sat Saturation of background light
+nl_br Brightness of night mode light 
+
+'''
+
 '''
 1. action    -> licht
 2.       Name      -> portmapping-Name
@@ -167,74 +219,28 @@ def processRequest(req):
 #
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    paramnames = {"power":"on",
-                  "bright":100,
-                  "ct":1700,
-                  "rgb":16777215,
-                  "hue":359,
-                  "sat":100,
-                  "color_mode":1,
-                  "flowing":1,
-                  "delayoff":60,
-                  "flow_params":2,
-                  "music_on":0,
-                  "name":"yeelight",
-                  "bg_power":0,
-                  "bg_flowing":"off",
-                  "bg_flow_params":"off",
-                  "bg_ct":0,
-                  "bg_lmode":2,
-                  "bg_bright":100,
-                  "bg_rgb":12777,
-                  "bg_hue":2,
-                  "bg_sat":100,
-                  "nl_br":100}
-    '''
-    Property Name Possible value
-    power on: smart LED is turned on  /  off: smart LED is turned off
-    bright Brightness percentage. Range 1 ~ 100
-    ct Color temperature. Range 1700 ~ 6500(k)
-    rgb Color. Range 1 ~ 16777215
-    hue Hue. Range 0 ~ 359
-    sat Saturation. Range 0 ~ 100
-    color_mode 1: rgb mode   /   2: color temperature mode / 3: hsv mode
-    flowing 0: no flow is running  /  1:color flow is running
-    delayoff The remaining time of a sleep timer. Range 1 ~ 60 (minutes)
-    flow_params Current flow parameters (only meaningful when 'flowing' is 1)
-    music_on 1: Music mode is on / 0: Music mode is off
-    name The name of the device set by “set_name” command
-    bg_power Background light power status
-    bg_flowing Background light is flowing
-    bg_flow_params Current flow parameters of background light
-    bg_ct Color temperature of background light
-    bg_lmode 1: rgb mode   /   2: color temperature mode / 3: hsv mode
-    bg_bright Brightness percentage of background light
-    bg_rgb Color of background light
-    bg_hue Hue of background light
-    bg_sat Saturation of background light
-    nl_br Brightness of night mode light 
-
-    '''
-
     # values containing device states:
     power       = 0
     rgb         = 0
     ct_value    = 0
+    global effect
+    global duration
     # following button-states contain str "pressed" or None
     get_prop    = request.form.get("get_prop")
     set_power   = request.form.get("set_power")
     set_rgb     = request.form.get("set_rgb")
     toggle      = request.form.get("toggle")
     set_ct_abx  = request.form.get("set_ct_abx")
-    response    = ""   # contains the return str sent back by the device
+    response    = b""   # contains the return str sent back by the device
         
     if request.method == "POST":
         print(request.form)
         # get form values that shall change the device state
-        power = request.form.get("powertext")
-        rgb = request.form.get("rgbtext")
-
-    print("get_prop:", get_prop)
+        power   = request.form.get("powertext")
+        rgb     = request.form.get("rgbtext")
+        ct      = request.form.get("cttext")
+        effect  = request.form.get("effect")
+        duration= request.form.get("durationtext")
     #print("Buttons+Texts:", set_power, power, set_rgb, rgb, toggle)
     #return "debug" # -- Debug --
 
@@ -265,8 +271,9 @@ def index():
         for paramname in paramnames:                                # "power", "bright" a.s.o
             resultindex = dictionaryindexof(paramnames, paramname)  # index of "power" in dict
             paramnames[paramname] = result[resultindex] # e.g. panms["power"] = result[0] = "on"
-        
-        return render_template("main.html", paramnames = paramnames, response = response)
+
+        #response = str(response.decode("ascii")) # invisible b' and \r\n
+        #return render_template("main.html", paramnames = paramnames, response = response)
     
     # Method:  set_ct_abx
     # Usage: This method is used to change the color temperature of a smart LED.
@@ -283,31 +290,36 @@ def index():
     # Response Example:  {"id":1, "result":["ok"]} NOTE:
     # Only accepted if the smart LED is currently in "on" state. if set_ct_abx is not None:
     if set_ct_abx is not None:
-        print(set_ct_abx)
+        params = ct + ", \"" + effect + "\", " + duration
+        response = telnettodevice('{"id":1,"method":"set_ct_abx","params":[' + params + ']} \r\n')
+        paramnames["ct"] = ct
+        #return render_template("main.html", response = response, paramnames = paramnames)
 
    
     # set_power -----------------------------
     if set_power is not None: #!= "":
         if "0" != str(power) and "off" != str(power): #request.form["powertext"]:
-            params = '["on", "smooth", 500]'
+            params = '"on", "smooth", 500'
         else:
-            params = '["off", "smooth", 500]'
-        response = telnettodevice('{ "id": 1, "method": "set_power", "params":' + params + '} \r\n')
+            params = '"off", "smooth", 500'
+        response = telnettodevice('{ "id": 1, "method": "set_power", "params":[' + params + ']} \r\n')
+        paramnames["power"] = json.loads("[" + params + "]")[0] # put sent power value in paramnames
         
     # set_rgb ------------------------------
-    if set_rgb is not None: # decimal integer ranges from 0 to 16777215 (hex: 0xFFFFFF). 
-        params = request.form["rgbtext"]
-        response = telnettodevice('{"id":1,"method":"set_rgb","params":[' + params + ', "smooth", 500]} \r\n')
+    if set_rgb is not None: # decimal integer ranges from 0 to 16777215 (hex: 0xFFFFFF).
+        params = rgb + ', "' + effect + '", ' + duration
+        response = telnettodevice('{"id":1,"method":"set_rgb","params":[' + params + ']} \r\n')
+        paramnames["rgb"] = rgb
         
     # toggle -----------------------------
     if toggle is not None:
         response = telnettodevice('{"id":1,"method":"toggle","params":[]} \r\n')
 
-    return render_template("main.html", power = power,
-                                        test = set_power,
-                            rgb = rgb,
-                           response = response,
-                           paramnames = paramnames)
+    response = str(response.decode("ascii")) # invisible b' and \r\n
+    return render_template("main.html", response = response,
+                           paramnames = paramnames,
+                           effect = effect,
+                           duration = duration)
 
 # ----------------------------------------
 # -------- telnet TCP to device ----------

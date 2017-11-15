@@ -3,24 +3,37 @@
 {% block body %}
 
     <form action="/ssdp" method="POST">
-        Yeelight WiFi LED device  -  Aktoren {{ test }} 
+        Yeelight WiFi LED device  -   
         <button type="submit" class="btn btn-outline-primary" name="ssdp" >ssdp uPnp</button>
     </form>
     
     <form action="/" method="POST">
     <span class="input-group-addon">
-        <input type="radio" name="effect" value="smooth" aria-label="Radio button for following text input">smooth
+        Aktoren
+        <input type="radio" name="effect" value="smooth" aria-label="Radio button for following text input" checked>smooth
         <input type="radio" name="effect" value="sudden" aria-label="Radio button for following text input">sudden
-        <input type="text" name="smoothduration" value="{{ duration }}" class="list-group-item list-group-item-action l" aria-label="Text input with radio button">
+        <input type="text" name="durationtext" value="{{ duration }}" class="list-group-item list-group-item-action l" aria-label="Text input with radio button">
       </span>
     <button type="button" class="btn btn-outline-primary" name="start_cf" >start_cf</button>
-    <button type="button" class="btn btn-outline-secondary" name="set_ct_abx" >set_ct_abx</button>
+    <button type="submit" class="btn btn-outline-secondary" name="set_ct_abx" value="ctgeklickt">set_ct_abx</button>
     <button type="submit" class="btn btn-outline-success" name="set_rgb" value="rgbgeklickt">set_rgb</button>
     <button type="button" class="btn btn-outline-danger" name="set_hsv" >set_hsv</button>
     <button type="button" class="btn btn-outline-warning" name="set_bright" >set_bright</button>
     <button type="submit" class="btn btn-outline-info" name="set_power" value="geklickt">set_power</button>
     <button type="submit" class="btn btn-outline-light" name="toggle" value="toogleklick">toggle</button>
     <button type="button" class="btn btn-outline-dark" name="set_default" >set_default</button>
+
+    <div class="bg-warning">Antwort: {{response}}</div>
+
+    Sensoren
+    <button type="submit" class="btn btn-outline-primary" name="get_prop" value="get_propgeklickt">get_prop</button>
+    <button type="button" class="btn btn-outline-secondary">cron_get</button>
+    <!-- button type="button" class="btn btn-outline-success">set_rgb</button>
+    <button type="button" class="btn btn-outline-danger">set_hsv</button>
+    <button type="button" class="btn btn-outline-warning">set_bright</button>
+    <button type="button" class="btn btn-outline-info">set_power</button>
+    <button type="button" class="btn btn-outline-light">toggle</button>
+    <button type="button" class="btn btn-outline-dark">set_default</button --!>
 
     <table class="table table-bordered table-dark table-sm table-hover table-striped">
       <thead>
@@ -52,18 +65,7 @@
       </tbody>
     </table>
     </div>
-    <p>Antwort: {{response}}</p>
-    <p>Sensoren</p>
-    <button type="submit" class="btn btn-outline-primary" name="get_prop" value="get_propgeklickt">get_prop</button>
-    <button type="button" class="btn btn-outline-secondary">cron_get</button>
-    <!-- button type="button" class="btn btn-outline-success">set_rgb</button>
-    <button type="button" class="btn btn-outline-danger">set_hsv</button>
-    <button type="button" class="btn btn-outline-warning">set_bright</button>
-    <button type="button" class="btn btn-outline-info">set_power</button>
-    <button type="button" class="btn btn-outline-light">toggle</button>
-    <button type="button" class="btn btn-outline-dark">set_default</button --!>
 
-    <input type="submit" value="abschicken"/>
     </form>
 
 {% endblock %}
