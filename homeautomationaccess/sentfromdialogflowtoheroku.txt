@@ -1,0 +1,82 @@
+{ 
+    "id": "fbfc3aa7-1e37-4d08-95a0-e3622914b173",   
+  "timestamp": "2017-11-17T20:26:04.798Z",  
+   "lang": "de",  
+   "result": {    
+     "source": "agent",       
+  "resolvedQuery": "schalte das wohnzimmerlicht an",  
+       "speech": "",       
+  "action": "lightaction",     
+    "actionIncomplete": false,    
+     "parameters": {       
+      "artikel": "das",     
+        "lichtname": "wohnzimmerdeckenlampe",    
+         "lichtzustand": "an"   
+      },       
+  "contexts": [], 
+        "metadata": { 
+            "intentId": "3d587ba7-8c46-4526-888f-84bf586a02ef", 
+            "webhookUsed": "true",  
+           "webhookForSlotFillingUsed": "false",  
+           "intentName": "lichtintent"   
+		   },         "fulfillment": {    
+		   "speech": "das wohnzimmerdeckenlampe habe ich nicht gefunden", 
+		   "messages": [   
+		   {    
+		   "type": 0,    
+		   "speech": "das wohnzimmerdeckenlampe habe ich nicht gefunden"   
+		   }   
+		   ]    
+		   },     
+		   "score": 1.0  
+		   },  
+		   "status": {  
+		   "code": 200,   
+		   "errorType": "success",   
+		   "webhookTimedOut": false  
+		   },  
+		   "sessionId": "4a305fee-b08c-4c81-a5cf-fec1159386b6"
+		    }
+			
+			
+Request:
+{
+    "id": "fbfc3aa7-1e37-4d08-95a0-e3622914b173",
+    "timestamp": "2017-11-17T20:26:04.798Z",
+    "lang": "de",
+    "result": {
+        "source": "agent",
+        "resolvedQuery": "schalte das wohnzimmerlicht an",
+        "speech": "",
+        "action": "lightaction",
+        "actionIncomplete": false,
+        "parameters": {
+            "artikel": "das",
+            "lichtname": "wohnzimmerdeckenlampe",
+            "lichtzustand": "an"
+        },
+        "contexts": [],
+        "metadata": {
+            "intentId": "3d587ba7-8c46-4526-888f-84bf586a02ef",
+            "webhookUsed": "true",
+            "webhookForSlotFillingUsed": "false",
+            "intentName": "lichtintent"
+        },
+        "fulfillment": {
+            "speech": "das wohnzimmerdeckenlampe habe ich nicht gefunden",
+            "messages": [
+                {
+                    "type": 0,
+                    "speech": "das wohnzimmerdeckenlampe habe ich nicht gefunden"
+                }
+            ]
+        },
+        "score": 1.0
+    },
+    "status": {
+        "code": 200,
+        "errorType": "success",
+        "webhookTimedOut": false
+    },
+    "sessionId": "4a305fee-b08c-4c81-a5cf-fec1159386b6"
+}

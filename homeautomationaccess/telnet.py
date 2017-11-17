@@ -185,12 +185,33 @@ nl_br Brightness of night mode light
 app = Flask(__name__)
 bootstrap = Bootstrap(app) # Webdesign-features
 
+
+'''
+"{\n    \"id\": \"fbfc3aa7-1e37-4d08-95a0-e3622914b173\",\n    \"timestamp\": \"2017-11-17T20:26:04.798Z\",\n    \"lang\": \"de\",\n    \"result\": {\n        \"source\": \"agent\",\n        \"resolvedQuery\": \"schalte das wohnzimmerlicht an\",\n        \"speech\": \"\",\n        \"action\": \"lightaction\",\n        \"actionIncomplete\": false,\n        \"parameters\": {\n            \"artikel\": \"das\",\n            \"lichtname\": \"wohnzimmerdeckenlampe\",\n            \"lichtzustand\": \"an\"\n        },\n        \"contexts\": [],\n        \"metadata\": {\n            \"intentId\": \"3d587ba7-8c46-4526-888f-84bf586a02ef\",\n            \"webhookUsed\": \"true\",\n            \"webhookForSlotFillingUsed\": \"false\",\n            \"intentName\": \"lichtintent\"\n        },\n        \"fulfillment\": {\n            \"speech\": \"das wohnzimmerdeckenlampe habe ich nicht gefunden\",\n            \"messages\": [\n                {\n                    \"type\": 0,\n                    \"speech\": \"das wohnzimmerdeckenlampe habe ich nicht gefunden\"\n                }\n            ]\n        },\n        \"score\": 1.0\n    },\n    \"status\": {\n        \"code\": 200,\n        \"errorType\": \"success\",\n        \"webhookTimedOut\": false\n    },\n    \"sessionId\": \"4a305fee-b08c-4c81-a5cf-fec1159386b6\"\n}"'''
 # -------- webhook for dialogflow ----------
 @app.route('/webhook', methods=['POST'])
 def webhook():
 	req = request.get_json(silent=True, force=True)
 	print("Request:")
 	print(json.dumps(req, indent=4))
+	result = req.get("result")
+	print("Elements:")
+	for element in result:
+		print(element)
+	if(result.get("action") == "lightaction"):
+		parameters = result.get("parameters")
+		if parameters.get("lichtname") == "wohnzimmerdeckenlampe":
+			if parameters.get("lichtzustand") == "an":
+				response = yeelight_set_power("on")
+			if parameters.get("lichtzustand") == "aus":
+				response = yeelight_set_power("off")
+#        "action": "lightaction",
+#        "actionIncomplete": false,
+#        "parameters": {
+#            "artikel": "das",
+#            "lichtname": "wohnzimmerdeckenlampe",
+#            "lichtzustand": "an"
+
 	#processRequest(req)
 	#return "webhook action msg"
 	res =  {
@@ -199,8 +220,11 @@ def webhook():
 			# "data": data,
 			# "contextOut": [],
 			"source": "marssonde.ddns.net:80",
-			"received": json.dumps(req, indent=4)
+			"data": str(response.decode("ascii"))
 			}
+	print(response)
+	print(res)
+	
 	res = json.dumps(res, indent=4)
 	# print(res)
 	r = make_response(res)
