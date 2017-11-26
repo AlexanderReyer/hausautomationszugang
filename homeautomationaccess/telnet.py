@@ -343,7 +343,10 @@ def index():
    
 	# set_power -----------------------------
 	if set_power is not None: #!= "":
-		response = yeelight_set_power(power)
+		#params 		= [power, "smooth", 500]
+		#jsonorder 	= make_yeelight_json_object(1, "set_power", params)
+		response 	= yeelight_set_power(power)
+		#response 	= yeelight_set_power(jsonorder)
 		paramnames["power"] = power # put sent power value in paramnames
 		#paramnames["power"] = json.loads("[" + params + "]")[0] # put sent power value in paramnames
 		
@@ -477,6 +480,7 @@ The logic can be expressed in following pseudo code.
 	if cron_del is not None:
 		response = telnettodevice('{"id":1,"method":"cron_del","params":[0]} \r\n')
 
+	
 	# calculate red green blue from decimal rgb-value
 	red 		= int( int(paramnames.get("rgb")) / 65536)
 	green 		= int( (int(paramnames.get("rgb")) - (red*65536)) / 256)
@@ -490,6 +494,20 @@ The logic can be expressed in following pseudo code.
 						   green=green,
 						   blue=blue)
 
+# ------------------------------------------------
+# --make_yeelight_json_object---------------------
+# create a json object to send to a yeelight device
+# inputparams: int, str, array
+def make_yeelight_json_object(id, method, params):
+	# create dictionary from parameters
+	dictforjson = {}
+	dictforjson["id"] 		= id
+	dictforjson["method"] 	= method
+	dictforjson["params"] 	= params
+	result = json.dumps(dictforjson) + ' \r\n'  # create JSON and append new line for yeelight device to recognize
+	print("make_yeelight_json_object: ", result) 
+	return result 
+						   
 # ----------------------------------------
 # -------- telnet TCP to device ----------
 def telnettodevice(writetext = ""):
@@ -552,11 +570,16 @@ def ssdp_lan():
 # --set_power ------------------
 # turn yeelight lamp on or off
 def yeelight_set_power(power):
+	'''
 	if "0" != str(power) and "off" != str(power): #request.form["powertext"]:
 		params = '"on", "smooth", 500'
 	else:
 		params = '"off", "smooth", 500'
-	return telnettodevice('{ "id": 1, "method": "set_power", "params":[' + params + ']} \r\n')
+	'''
+	params 		= [power, "smooth", 500]
+	jsonorder 	= make_yeelight_json_object(1, "set_power", params)
+	#return telnettodevice('{ "id": 1, "method": "set_power", "params":[' + params + ']} \r\n')
+	return telnettodevice(jsonorder)
 	
 # -------- ssdp yeelight lamp GLOBAL -------
 # use port mapping from fritzbox to connect to ssdp-IP-Addr
