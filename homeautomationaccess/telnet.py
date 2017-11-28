@@ -52,8 +52,24 @@
 # sensors: socket
 #		   power, ID, IP, Port
 
+# SQL Query to get the most important data:
+# - - - - - - - - - - - - - -
+# sent from dialogflow:
+# dialogflow --json--> dialogflowname 	= forwardport
+# dialogflow --json--> action-name 		= herstellername (json-yeelight-order or GET-sonoff-order to device)
+# dialogflow --flask-> ortname			= dyndns.url
+#
+# select forwardport, dyndns, dialogflowname, herstellername 
+# from devices 
+# inner join ort on ortname = 'steinburg' and devices.ortid = ort.ortid 
+# inner join hersteller on hersteller.herstellername = 'sonoff' and hersteller.herstellerid = devices.herstellerid 
+# inner join dialogflow on dialogflow.dialogflowid = devices.dialogflowid;
 
-import	os,re,telnetlib
+
+
+
+
+import	os,re,telnetlib, http.client #httplib
 from	flask import Flask
 from	flask import request
 from	flask import make_response, render_template
@@ -187,6 +203,66 @@ bootstrap = Bootstrap(app) # Webdesign-features
 
 
 '''
+5.1 Request-Line
+
+   The Request-Line begins with a method token, followed by the
+   Request-URI and the protocol version, and ending with CRLF. The
+   elements are separated by SP characters. No CR or LF is allowed
+   except in the final CRLF sequence.
+
+        Request-Line   = Method SP Request-URI SP HTTP-Version CRLF
+
+
+
+
+
+
+
+
+
+
+
+Fielding, et al.            Standards Track                    [Page 35]
+ 
+RFC 2616                        HTTP/1.1                       June 1999
+
+
+5.1.1 Method
+
+   The Method  token indicates the method to be performed on the
+   resource identified by the Request-URI. The method is case-sensitive.
+
+       Method         = "OPTIONS"                ; Section 9.2
+                      | "GET"                    ; Section 9.3
+                      | "HEAD"                   ; Section 9.4
+                      | "POST"                   ; Section 9.5
+                      | "PUT"                    ; Section 9.6
+                      | "DELETE"                 ; Section 9.7
+                      | "TRACE"                  ; Section 9.8
+                      | "CONNECT"                ; Section 9.9
+                      | extension-method
+       extension-method = token
+
+   The list of methods allowed by a resource can be specified in an
+   Allow header field (section 14.7). The return code of the response
+   always notifies the client whether a method is currently allowed on a
+   resource, since the set of allowed methods can change dynamically. An
+   origin server SHOULD return the status code 405 (Method Not Allowed)
+   if the method is known by the origin server but not allowed for the
+   requested resource, and 501 (Not Implemented) if the method is
+   unrecognized or not implemented by the origin server. The methods GET
+   and HEAD MUST be supported by all general-purpose servers. All other
+   methods are OPTIONAL; however, if the above methods are implemented,
+   they MUST be implemented with the same semantics as those specified
+   in section 9.'''
+@app.route('/sonoff/', methods=['POST', 'GET'], defaults = {'param' : ""})
+@app.route('/sonoff/<param>', methods=['POST', 'GET'])
+def	sonoff(param):
+	result = httptodevice('/cm?cmnd=Power%20' + param + ' HTTP/1.1' + "\nHost:localhost\r\n", '192.168.178.28', 80)
+		
+	return str("schreibe /sonoff/on oder off <br>" + result.decode('ascii'))
+
+'''
 "{\n    \"id\": \"fbfc3aa7-1e37-4d08-95a0-e3622914b173\",\n    \"timestamp\": \"2017-11-17T20:26:04.798Z\",\n    \"lang\": \"de\",\n    \"result\": {\n        \"source\": \"agent\",\n        \"resolvedQuery\": \"schalte das wohnzimmerlicht an\",\n        \"speech\": \"\",\n        \"action\": \"lightaction\",\n        \"actionIncomplete\": false,\n        \"parameters\": {\n            \"artikel\": \"das\",\n            \"lichtname\": \"wohnzimmerdeckenlampe\",\n            \"lichtzustand\": \"an\"\n        },\n        \"contexts\": [],\n        \"metadata\": {\n            \"intentId\": \"3d587ba7-8c46-4526-888f-84bf586a02ef\",\n            \"webhookUsed\": \"true\",\n            \"webhookForSlotFillingUsed\": \"false\",\n            \"intentName\": \"lichtintent\"\n        },\n        \"fulfillment\": {\n            \"speech\": \"das wohnzimmerdeckenlampe habe ich nicht gefunden\",\n            \"messages\": [\n                {\n                    \"type\": 0,\n                    \"speech\": \"das wohnzimmerdeckenlampe habe ich nicht gefunden\"\n                }\n            ]\n        },\n        \"score\": 1.0\n    },\n    \"status\": {\n        \"code\": 200,\n        \"errorType\": \"success\",\n        \"webhookTimedOut\": false\n    },\n    \"sessionId\": \"4a305fee-b08c-4c81-a5cf-fec1159386b6\"\n}"'''
 # -------- webhook for dialogflow ----------
 @app.route('/webhook', methods=['POST'])
@@ -211,9 +287,14 @@ def webhook():
 #            "artikel": "das",
 #            "lichtname": "wohnzimmerdeckenlampe",
 #            "lichtzustand": "an"
+	if(result.get("action") == "plugaction"):
+		parameters = result.get("parameters")
+		if parameters.get("steckdose") == "schreibtischsteckdose":
+			if parameters.get("steckdosenzustand") == "an":
+				result = httptodevice('/cm?cmnd=Power%20On HTTP/1.1' + "\nHost:localhost\r\n", host, 81)
+			if parameters.get("steckdosenzustand") == "aus":
+				result = httptodevice('/cm?cmnd=Power%20Off HTTP/1.1' + "\nHost:localhost\r\n", host, 81)
 
-	#processRequest(req)
-	#return "webhook action msg"
 	res =  {
 			"speech": "webhook wurde aufgerufen",
 			"displayText": "webhook wurde aufgerufen",
@@ -231,11 +312,6 @@ def webhook():
 	r.headers['Content-Type'] = 'application/json'
 	return r
 
-def processRequest(req):
-	if req.get("result").get("action") != "":
-		return {}
-	res = "action"
-	return res
 
 @app.route('/colorpicker', methods=['GET', 'POST'])
 def colorpicker():
@@ -299,6 +375,8 @@ def index():
 	# Response Example:	 {"id":1, "result":["on", "", "100"]}
 	# NOTE:							 All the supported properties are defined in table 4-2, section 4.3
 	if get_prop is not None:
+		response = yeelight_get_prop()
+		'''
 		params		= ""		 # will contain "power", "bright" a.s.o.
 		result		= 0
 		response	= 0
@@ -316,7 +394,7 @@ def index():
 		for paramname in paramnames:								# "power", "bright" a.s.o
 			resultindex = dictionaryindexof(paramnames, paramname)	# index of "power" in dict
 			paramnames[paramname] = result[resultindex] # e.g. panms["power"] = result[0] = "on"
-
+		'''
 		#response = str(response.decode("ascii")) # invisible b' and \r\n
 		#return render_template("main.html", paramnames = paramnames, response = response)
 	
@@ -335,9 +413,13 @@ def index():
 	# Response Example:	 {"id":1, "result":["ok"]} NOTE:
 	# Only accepted if the smart LED is currently in "on" state. if set_ct_abx is not None:
 	if set_ct_abx is not None:
+		response = yeelight_set_ct_abx(ct)
+		'''
 		params = ct + ", \"" + effect + "\", " + duration
 		response = telnettodevice('{"id":1,"method":"set_ct_abx","params":[' + params + ']} \r\n')
+		'''
 		paramnames["ct"] = ct
+		
 		#return render_template("main.html", response = response, paramnames = paramnames)
 
    
@@ -525,6 +607,21 @@ def telnettodevice(writetext = ""):
 
 
 # ----------------------------------------
+# -------- http request to device --------
+def httptodevice(writetext, host, port):
+	#class httplib.HTTPConnection(host[, port[, strict[, timeout[, source_address]]]])¶
+	#conn = http.client.HTTPConnection(host, port, false, 5)
+	#class http.client.HTTPConnection(host, port=None, [timeout, ]source_address=None)
+	conn = http.client.HTTPConnection(host, port, 10)
+	conn.request("GET", writetext)
+	result = conn.getresponse()
+	print(result.status, result.reason)
+	response = result.read()
+	print(response)
+	conn.close
+	return response
+	
+# ----------------------------------------
 # -------- dictionaryindexof -------------
 # get index number of dictionary key -----
 def dictionaryindexof(dictionary, searchkey):
@@ -567,6 +664,41 @@ def ssdp_lan():
 	return render_template("main.html", response = data)
 
 
+
+# --get_prop ------------------
+# get yeelight lamp parameters like brightness
+def yeelight_get_prop():
+	params		= []		 # will contain "power", "bright" a.s.o.
+	result		= 0
+	response	= 0
+	resultindex = 0
+	
+	for paramname in paramnames:
+		params.append(paramname) #str("\"", paramname, "\","))
+	print(params)
+	jsonorder 	= make_yeelight_json_object(1, "get_prop", params)
+	response = telnettodevice(jsonorder)
+	print("str(response): ", str(response.decode("ascii"))) #.replace("\r\n", "")
+	# b'{"id":1, "result":["off","100","4000","123445","359","100","1","0","0","","0","","","","","","","","","","",""]}\r\n'
+	result = json.loads(str(response.decode("ascii")))	# complete json dictionary
+	result = result.get("result")						# array of result values
+	print("result: ", result)
+	for paramname in paramnames:								# "power", "bright" a.s.o
+		resultindex = dictionaryindexof(paramnames, paramname)	# index of "power" in dict
+		paramnames[paramname] = result[resultindex] # e.g. panms["power"] = result[0] = "on"
+	return response
+		
+# --set_ct_abx ------------------
+# set yeelight color temperature
+def yeelight_set_ct_abx(ct):
+	params = []	# list
+	params.append(int(ct))
+	params.append(effect)
+	params.append(duration)
+	jsonorder = make_yeelight_json_object(1, "set_ct_abx", params)
+	response = telnettodevice(jsonorder)
+	return response
+		
 # --set_power ------------------
 # turn yeelight lamp on or off
 def yeelight_set_power(power):

@@ -1,2 +1,5 @@
-Flask
-flask_bootstrap
+Flask==0.12.2
+Flask-Bootstrap==3.3.7.1
+psycopg2==2.7.3.2
+requests==2.18.4
+gunicorn
