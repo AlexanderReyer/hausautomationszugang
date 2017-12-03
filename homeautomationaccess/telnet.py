@@ -292,8 +292,13 @@ def	dbgui():
 https://homeautomationaccess.herokuapp.com/webhook
 "{\n    \"id\": \"fbfc3aa7-1e37-4d08-95a0-e3622914b173\",\n    \"timestamp\": \"2017-11-17T20:26:04.798Z\",\n    \"lang\": \"de\",\n    \"result\": {\n        \"source\": \"agent\",\n        \"resolvedQuery\": \"schalte das wohnzimmerlicht an\",\n        \"speech\": \"\",\n        \"action\": \"lightaction\",\n        \"actionIncomplete\": false,\n        \"parameters\": {\n            \"artikel\": \"das\",\n            \"lichtname\": \"wohnzimmerdeckenlampe\",\n            \"lichtzustand\": \"an\"\n        },\n        \"contexts\": [],\n        \"metadata\": {\n            \"intentId\": \"3d587ba7-8c46-4526-888f-84bf586a02ef\",\n            \"webhookUsed\": \"true\",\n            \"webhookForSlotFillingUsed\": \"false\",\n            \"intentName\": \"lichtintent\"\n        },\n        \"fulfillment\": {\n            \"speech\": \"das wohnzimmerdeckenlampe habe ich nicht gefunden\",\n            \"messages\": [\n                {\n                    \"type\": 0,\n                    \"speech\": \"das wohnzimmerdeckenlampe habe ich nicht gefunden\"\n                }\n            ]\n        },\n        \"score\": 1.0\n    },\n    \"status\": {\n        \"code\": 200,\n        \"errorType\": \"success\",\n        \"webhookTimedOut\": false\n    },\n    \"sessionId\": \"4a305fee-b08c-4c81-a5cf-fec1159386b6\"\n}"'''
 # -------- webhook for dialogflow ----------
-@app.route('/webhook', methods=['POST'])
-def webhook():
+@app.route('/webhook/', methods=['POST', 'GET'], defaults = {'ortname' : "steinburg"})
+@app.route('/webhook/<ortname>', methods=['POST', 'GET'])
+#@app.route('/webhook', methods=['POST'])
+def webhook(ortname):
+	speech	= "webhook aufgerufen"
+	data	= ""
+	zustand = ""
 	req = request.get_json(silent=True, force=True)
 	print("Request:")
 	print(json.dumps(req, indent=4))
@@ -301,38 +306,102 @@ def webhook():
 	print("Elements:")
 	for element in result:
 		print(element)
+		
+	print("localhostname: ", socket.gethostname())
+	# database test
+	#	connect_to_database(socket.gethostname())
+	connect_to_database("heroku")
+	# yeelight needed values
+	# host		port id
+	# marssonde 80   1
+	# dyndns    devices.port devices.yeelightid
+	# ort query
+	# devices query
+	#devicevalues = get_devices_values(ortname, 'yeelight', 'wohnzimmerdeckenlampe')
+	# rows:  [(80, 'marssonde.ddns.org', 'wohnzimmerdeckenlampe', 'yeelight', 1)]
+
+
+	response = ""
+	parameters = result.get("parameters")
 	if(result.get("action") == "lightaction"):
-		parameters = result.get("parameters")
-		if parameters.get("lichtname") == "wohnzimmerdeckenlampe":
-			# db query forwardport, yeelightid
-			if parameters.get("lichtzustand") == "an":
-				response = yeelight_set_power("on")
-			if parameters.get("lichtzustand") == "aus":
-				response = yeelight_set_power("off")
+		herstellername = "yeelight"
+		dialogflowname = parameters.get("lichtname")
+
+	if(result.get("action") == "plugaction"):
+		herstellername = "sonoff"
+		dialogflowname = parameters.get("steckdose")
+
+	devicevalues = get_devices_values(ortname, herstellername, dialogflowname)
+	# error check if sql query got anything
+	if devicevalues is None:
+		speech = "Ich habe " + parameters.get("artikel") + " " + herstellername + " " + dialogflowname + " nicht gefunden"
+		close_database_connection()
+		return create_dialogflowresponse(speech, data)
+		
+	print(devicevalues)
+	port 			= devicevalues[0]
+	host 			= devicevalues[1]
+	dialogflowname	= devicevalues[2]
+	herstellername	= devicevalues[3]
+	yeelightid		= devicevalues[4]
+	print("postgres devices port:", port, " host: ", host)
+
+	# ------------- YEELIGHT --------------------
+	if(result.get("action") == "lightaction"):
+		zustand = parameters.get("lichtzustand")
+		if zustand == "an":
+			response = yeelight_set_power("on")
+		if zustand == "aus":
+			response = yeelight_set_power("off")
+		response 	= str(response.decode("ascii")) # invisible b' and \r\n	
+		print(response)
 #        "action": "lightaction",
 #        "actionIncomplete": false,
 #        "parameters": {
 #            "artikel": "das",
 #            "lichtname": "wohnzimmerdeckenlampe",
 #            "lichtzustand": "an"
+
+	# ------------- SONOFF --------------------
 	if(result.get("action") == "plugaction"):
-		parameters = result.get("parameters")
-		if parameters.get("steckdose") == "schreibtischsteckdose":
-			# db query
-			if parameters.get("steckdosenzustand") == "an":
-				result = httptodevice('/cm?cmnd=Power%20On HTTP/1.1' + "\nHost:localhost\r\n", host, 81)
-			if parameters.get("steckdosenzustand") == "aus":
-				result = httptodevice('/cm?cmnd=Power%20Off HTTP/1.1' + "\nHost:localhost\r\n", host, 81)
+		zustand = parameters.get("steckdosenzustand")
+		if zustand == "an":
+			response = httptodevice('/cm?cmnd=Power%20On HTTP/1.1' + "\nHost:localhost\r\n", host, port)
+		if zustand == "aus":
+			response = httptodevice('/cm?cmnd=Power%20Off HTTP/1.1' + "\nHost:localhost\r\n", host, port)
+		response 	= str(response.decode("ascii")) # invisible b' and \r\n	
+
+	close_database_connection()
+	
+	speech	= parameters.get("artikel") + " " + dialogflowname + " ist nun " + zustand
+	#data	= str(port) +" "+	host +" "+	dialogflowname	+" "+	herstellername	+" "+	str(yeelightid)
 
 	res =  {
 			"speech": "webhook wurde aufgerufen",
 			"displayText": "webhook wurde aufgerufen",
+			"source": "marssonde.ddns.net:80"
+			}
+	res = json.dumps(res, indent=4)
+	print(res)
+	r = make_response(res)
+	r.headers['Content-Type'] = 'application/json'
+	
+	r = create_dialogflowresponse(speech, data)
+
+	return r
+	
+# ---------------------------
+#   create_dialogflowresponse
+#   Text-Json which google assistant shall speak out to the user
+def create_dialogflowresponse(speech, data):
+	res =  {
+			"speech": speech,
+			"displayText": speech,
 			# "data": data,
 			# "contextOut": [],
-			"source": "marssonde.ddns.net:80",
-			"data": str(response.decode("ascii"))
+			"source": host,
+			"data": data
 			}
-	print(response)
 	print(res)
 	
 	res = json.dumps(res, indent=4)
@@ -340,6 +409,7 @@ def webhook():
 	r = make_response(res)
 	r.headers['Content-Type'] = 'application/json'
 	return r
+	
 
 
 @app.route('/colorpicker', methods=['GET', 'POST'])
@@ -828,11 +898,11 @@ def sourceoff():
 
 # -------- MAIN LOCALHOST SERVER  ----------
 if __name__ == '__main__':
-	serverport = int(os.getenv('PORT', 443))
+	serverport = int(os.getenv('PORT', 5000))
 
 	print("Starting app on port %d" % serverport)
 
 	#app.run(debug=True, host='192.168.178.23', port=serverport) 
-	app.run(host='0.0.0.0', debug=True, port=serverport, ssl_context=('cert.pem', 'key.pem')) #, ssl_context='adhoc') 
+	app.run(host='0.0.0.0', debug=True, port=serverport) #, ssl_context=('cert.pem', 'key.pem')) #, ssl_context='adhoc') 
 	#app.run(host='0.0.0.0', debug=False, port=serverport, ssl_context='adhoc') 
 	#host='0.0.0.0', port=serverport) #, host='0.0.0.0')

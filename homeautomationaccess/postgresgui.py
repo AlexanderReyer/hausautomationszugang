@@ -145,7 +145,7 @@ def exec_query(sqlquery):
 		print(e.diag.severity)
 		print(str(e.pgerror))
 		print(str(e.pgcode))
-		result = str(e.diag.severity) + e.pgerror + e.pgcode #e.diag.message_primary)
+		result = str(e.diag.severity) + str(e.pgerror) + str(e.pgcode) #e.diag.message_primary)
 		pass
 	result += "<br>" + dbcursor.statusmessage
 	return result
