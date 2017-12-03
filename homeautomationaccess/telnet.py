@@ -76,6 +76,7 @@ from	flask import make_response, render_template
 from flask_bootstrap import Bootstrap
 import	json
 import socket		# ssdp uPnP searching for yeelight
+from postgresgui import *	# perform sql-queries and setting tables for devices
 
 msg = \
 	'M-SEARCH * HTTP/1.1\r\n' \
@@ -94,6 +95,8 @@ host		= "marssonde.ddns.net"	# connect to device via port mapping
 hostssdp	= '239.255.255.250'		# search for uPnP device
 port		= 80
 portssdp	= 1982					# yeelight ssdp-port instead of 1900
+herstellername = ""
+yeelightid	= 0
 
 paramnames = {"power":"on",
 			  "bright":100,
@@ -262,7 +265,31 @@ def	sonoff(param):
 		
 	return str("schreibe /sonoff/on oder off <br>" + result.decode('ascii'))
 
+# ----------- Flask ----------------------------
+@app.route('/dbgui', methods = ['POST', 'GET'])
+def	dbgui():
+	result 		= request.form.get("result")
+	sqlquery	= request.form.get("sqlquery")
+	connect_to_database("localhost")
+	
+	if request.form.get("createtableorte"):
+		result = create_table("ort")
+	if request.form.get("showtables"):
+		result = show_tables()
+	if request.form.get("showpublictables"):
+		result = show_public_tables()
+	if request.form.get("execquery"):
+		sqlquery = request.form.get("sqlquery")
+		#print("telnet.py sqlquery: " + sqlquery)
+		result = exec_query(sqlquery)
+		
+	close_database_connection()
+	print("sqlquery vor render_t ", sqlquery)
+	return render_template('dbgui.html', result = result, sqlquery = sqlquery)
+	
+
 '''
+https://homeautomationaccess.herokuapp.com/webhook
 "{\n    \"id\": \"fbfc3aa7-1e37-4d08-95a0-e3622914b173\",\n    \"timestamp\": \"2017-11-17T20:26:04.798Z\",\n    \"lang\": \"de\",\n    \"result\": {\n        \"source\": \"agent\",\n        \"resolvedQuery\": \"schalte das wohnzimmerlicht an\",\n        \"speech\": \"\",\n        \"action\": \"lightaction\",\n        \"actionIncomplete\": false,\n        \"parameters\": {\n            \"artikel\": \"das\",\n            \"lichtname\": \"wohnzimmerdeckenlampe\",\n            \"lichtzustand\": \"an\"\n        },\n        \"contexts\": [],\n        \"metadata\": {\n            \"intentId\": \"3d587ba7-8c46-4526-888f-84bf586a02ef\",\n            \"webhookUsed\": \"true\",\n            \"webhookForSlotFillingUsed\": \"false\",\n            \"intentName\": \"lichtintent\"\n        },\n        \"fulfillment\": {\n            \"speech\": \"das wohnzimmerdeckenlampe habe ich nicht gefunden\",\n            \"messages\": [\n                {\n                    \"type\": 0,\n                    \"speech\": \"das wohnzimmerdeckenlampe habe ich nicht gefunden\"\n                }\n            ]\n        },\n        \"score\": 1.0\n    },\n    \"status\": {\n        \"code\": 200,\n        \"errorType\": \"success\",\n        \"webhookTimedOut\": false\n    },\n    \"sessionId\": \"4a305fee-b08c-4c81-a5cf-fec1159386b6\"\n}"'''
 # -------- webhook for dialogflow ----------
 @app.route('/webhook', methods=['POST'])
@@ -277,6 +304,7 @@ def webhook():
 	if(result.get("action") == "lightaction"):
 		parameters = result.get("parameters")
 		if parameters.get("lichtname") == "wohnzimmerdeckenlampe":
+			# db query forwardport, yeelightid
 			if parameters.get("lichtzustand") == "an":
 				response = yeelight_set_power("on")
 			if parameters.get("lichtzustand") == "aus":
@@ -290,6 +318,7 @@ def webhook():
 	if(result.get("action") == "plugaction"):
 		parameters = result.get("parameters")
 		if parameters.get("steckdose") == "schreibtischsteckdose":
+			# db query
 			if parameters.get("steckdosenzustand") == "an":
 				result = httptodevice('/cm?cmnd=Power%20On HTTP/1.1' + "\nHost:localhost\r\n", host, 81)
 			if parameters.get("steckdosenzustand") == "aus":
@@ -333,6 +362,7 @@ def index():
 	ct_value	= 0
 	global effect
 	global duration
+	
 	# following button-states contain str "pressed" or None
 	get_prop	= request.form.get("get_prop")
 	set_power	= request.form.get("set_power")
@@ -352,7 +382,29 @@ def index():
 	cron_del	= request.form.get("cron_del")
 
 	response	= b""	# contains the return str sent back by the device
-		
+
+	print("localhostname: ", socket.gethostname())
+	# database test
+	#	connect_to_database(socket.gethostname())
+	connect_to_database("heroku")
+	# yeelight needed values
+	# host		port id
+	# marssonde 80   1
+	# dyndns    devices.port devices.yeelightid
+	# ort query
+	# devices query
+	devicevalues = get_devices_values('reinfeld', 'yeelight', 'wohnzimmerdeckenlampe')
+	# rows:  [(80, 'marssonde.ddns.org', 'wohnzimmerdeckenlampe', 'yeelight', 1)]
+	print(devicevalues)
+	port 			= devicevalues[0]
+	host 			= devicevalues[1]
+	dialogflowname	= devicevalues[2]
+	herstellername	= devicevalues[3]
+	yeelightid		= devicevalues[4]
+	print("postgres devices port:", port, " host: ", host)
+	
+	close_database_connection()
+	
 	if request.method == "POST":
 		print(request.form)
 		# get form values that shall change the device state
@@ -676,7 +728,7 @@ def yeelight_get_prop():
 	for paramname in paramnames:
 		params.append(paramname) #str("\"", paramname, "\","))
 	print(params)
-	jsonorder 	= make_yeelight_json_object(1, "get_prop", params)
+	jsonorder 	= make_yeelight_json_object(yeelightid, "get_prop", params)
 	response = telnettodevice(jsonorder)
 	print("str(response): ", str(response.decode("ascii"))) #.replace("\r\n", "")
 	# b'{"id":1, "result":["off","100","4000","123445","359","100","1","0","0","","0","","","","","","","","","","",""]}\r\n'
@@ -695,7 +747,7 @@ def yeelight_set_ct_abx(ct):
 	params.append(int(ct))
 	params.append(effect)
 	params.append(duration)
-	jsonorder = make_yeelight_json_object(1, "set_ct_abx", params)
+	jsonorder = make_yeelight_json_object(yeelightid, "set_ct_abx", params)
 	response = telnettodevice(jsonorder)
 	return response
 		
@@ -709,7 +761,7 @@ def yeelight_set_power(power):
 		params = '"off", "smooth", 500'
 	'''
 	params 		= [power, "smooth", 500]
-	jsonorder 	= make_yeelight_json_object(1, "set_power", params)
+	jsonorder 	= make_yeelight_json_object(yeelightid, "set_power", params)
 	#return telnettodevice('{ "id": 1, "method": "set_power", "params":[' + params + ']} \r\n')
 	return telnettodevice(jsonorder)
 	
@@ -776,8 +828,11 @@ def sourceoff():
 
 # -------- MAIN LOCALHOST SERVER  ----------
 if __name__ == '__main__':
-	serverport = int(os.getenv('PORT', 5000))
+	serverport = int(os.getenv('PORT', 443))
 
 	print("Starting app on port %d" % serverport)
 
-	app.run(debug=True, port=serverport) #, host='0.0.0.0')
+	#app.run(debug=True, host='192.168.178.23', port=serverport) 
+	app.run(host='0.0.0.0', debug=True, port=serverport, ssl_context=('cert.pem', 'key.pem')) #, ssl_context='adhoc') 
+	#app.run(host='0.0.0.0', debug=False, port=serverport, ssl_context='adhoc') 
+	#host='0.0.0.0', port=serverport) #, host='0.0.0.0')

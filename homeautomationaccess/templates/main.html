@@ -36,7 +36,9 @@
     <button type="submit" class="btn btn-outline-primary btn-warning" name="stop_cf" value="stop_cfgeklickt">stop_cf</button>
     <button type="submit" class="btn btn-outline-secondary" name ="cron_del" value="cron_delgeklickt">cron_del</button>
 
-    <div class="bg-warning">Antwort: {{response}}</div>
+	{% autoescape false %}
+    <div class="bg-warning">Antwort: {{response }}</div>
+	{% endautoescape %}
 
     Sensoren
     <button type="submit" class="btn btn-outline-primary" name="get_prop" value="get_propgeklickt">get_prop</button>
