@@ -10,6 +10,7 @@ app = Flask(__name__)
 
 dbconnection 	= None
 dbcursor		= None
+rows			= None
 
 def connect_to_database(localhostname):
 	global dbconnection
@@ -83,6 +84,31 @@ def show_public_tables():
 	print(dbconnection.notices)
 	return get_fetchallstring()
 
+def get_dialogflownames():
+	global dbcursor
+	sqlquery = "select dialogflowname from dialogflow;"
+	dbcursor.execute(sqlquery)
+	print(dbcursor.statusmessage)
+	print("notices: ", dbconnection.notices, " count: ", dbcursor.rowcount)
+	return dbcursor.fetchall()
+	
+def get_herstellernames():
+	global dbcursor
+	sqlquery = "select herstellername from hersteller;"
+	dbcursor.execute(sqlquery)
+	print(dbcursor.statusmessage)
+	print("notices: ", dbconnection.notices, " count: ", dbcursor.rowcount)
+	return dbcursor.fetchall()
+
+def get_devicenamen(devicename):
+	global dbcursor
+	sqlquery = "select dialogflowname from devices join dialogflow on dialogflow.dialogflowid = devices.dialogflowid \
+				join hersteller on hersteller.herstellerid = devices.herstellerid and hersteller.herstellername = '" + devicename + "'"
+	dbcursor.execute(sqlquery)
+	print(dbcursor.statusmessage)
+	print("notices: ", dbconnection.notices, " count: ", dbcursor.rowcount)
+	return dbcursor.fetchall()
+
 # --get_devices_values -------------------	
 # select forwardport, dyndns, dialogflowname, herstellername 
 # to be changed by webhook
@@ -124,6 +150,7 @@ def show_tables():
 
 def exec_query(sqlquery):
 	global dbcursor
+	global rows
 	result	= ""
 	e 		= ""
 	try:
@@ -150,6 +177,13 @@ def exec_query(sqlquery):
 	result += "<br>" + dbcursor.statusmessage
 	return result
 	
+def exec_query_rows(sqlquery):
+	global dbcursor
+	print("exec_query_rows: " + sqlquery)
+	dbcursor.execute(sqlquery)
+	print("status : " + dbcursor.statusmessage)
+	return dbcursor.fetchall()
 
+	
 if __name__ == '__main__':
 	app.run(debug=True)

@@ -268,6 +268,7 @@ def	sonoff(param):
 # ----------- Flask ----------------------------
 @app.route('/dbgui', methods = ['POST', 'GET'])
 def	dbgui():
+	global dbcursor
 	result 		= request.form.get("result")
 	sqlquery	= request.form.get("sqlquery")
 	connect_to_database("localhost")
@@ -282,10 +283,30 @@ def	dbgui():
 		sqlquery = request.form.get("sqlquery")
 		#print("telnet.py sqlquery: " + sqlquery)
 		result = exec_query(sqlquery)
+	
+	# show table ort
+	tableort = exec_query_rows("SELECT column_name FROM information_schema.columns WHERE table_name ='ort';")
+	#print("ort columns: ", tableort)
+	tableortcontent = exec_query_rows("SELECT * FROM ort;")
+	# show table hersteller
+	tablehersteller = exec_query_rows("SELECT column_name FROM information_schema.columns WHERE table_name ='hersteller';")
+	#print("ort columns: ", tablehersteller)
+	tableherstellercontent = exec_query_rows("SELECT * FROM hersteller;")
+	# show table dialogflow
+	tabledialogflow = exec_query_rows("SELECT column_name FROM information_schema.columns WHERE table_name ='dialogflow';")
+	#print("dialogflow columns: ", tabledialogflow)
+	tabledialogflowcontent = exec_query_rows("SELECT * FROM dialogflow;")
+	# show table devices
+	tabledevices = exec_query_rows("SELECT column_name FROM information_schema.columns WHERE table_name ='devices';")
+	#print("devices columns: ", tabledevices)
+	tabledevicescontent = exec_query_rows("SELECT * FROM devices;")
 		
 	close_database_connection()
-	print("sqlquery vor render_t ", sqlquery)
-	return render_template('dbgui.html', result = result, sqlquery = sqlquery)
+
+	return render_template('dbgui.html', result = result, sqlquery = sqlquery, tableort = tableort, tableortcontent = tableortcontent,
+						tabledevices = tabledevices, tabledevicescontent = tabledevicescontent,
+						tabledialogflow = tabledialogflow, tabledialogflowcontent = tabledialogflowcontent,
+						tablehersteller = tablehersteller, tableherstellercontent = tableherstellercontent)
 	
 
 '''
@@ -296,9 +317,12 @@ https://homeautomationaccess.herokuapp.com/webhook
 @app.route('/webhook/<ortname>', methods=['POST', 'GET'])
 #@app.route('/webhook', methods=['POST'])
 def webhook(ortname):
+	global	host
+	global	port
 	speech	= "webhook aufgerufen"
 	data	= ""
 	zustand = ""
+	devicevalues = None
 	req = request.get_json(silent=True, force=True)
 	print("Request:")
 	print(json.dumps(req, indent=4))
@@ -323,6 +347,27 @@ def webhook(ortname):
 
 	response = ""
 	parameters = result.get("parameters")
+	if(result.get("action") == "queryaction"):
+		data = parameters.get("querydevices")
+		if("lichter" == data):
+			devicevalues = get_devicenamen("yeelight")
+		if("steckdosen" == data):
+			devicevalues = get_devicenamen("sonoff")
+		if("apparate" == data):
+			devicevalues = get_dialogflownames()
+		if("hersteller" == data):
+			devicevalues = get_herstellernames()
+		if devicevalues is None:
+			speech = "Ich habe keine " + parameters.get("querydevices") + " gefunden"
+			close_database_connection()
+			return create_dialogflowresponse(speech, data)
+		print(devicevalues)
+		speech = "es gibt "
+		for item in devicevalues:
+			print(item)
+			speech += str(item[0]) + " "
+		return create_dialogflowresponse(speech, data)
+			
 	if(result.get("action") == "lightaction"):
 		herstellername = "yeelight"
 		dialogflowname = parameters.get("lichtname")
@@ -346,6 +391,10 @@ def webhook(ortname):
 	yeelightid		= devicevalues[4]
 	print("postgres devices port:", port, " host: ", host)
 
+	# ------------- SQL QUERIES -----------------
+	#if(result.get("action") == "queryaction"):
+	# select * from devices
+		
 	# ------------- YEELIGHT --------------------
 	if(result.get("action") == "lightaction"):
 		zustand = parameters.get("lichtzustand")
@@ -407,7 +456,7 @@ def create_dialogflowresponse(speech, data):
 	res = json.dumps(res, indent=4)
 	# print(res)
 	r = make_response(res)
-	r.headers['Content-Type'] = 'application/json'
+	r.headers['Content-Type'] = 'application/json; charset=utf-8'
 	return r
 	
 
@@ -715,6 +764,8 @@ def make_yeelight_json_object(id, method, params):
 # ----------------------------------------
 # -------- telnet TCP to device ----------
 def telnettodevice(writetext = ""):
+	global	host
+	global	port
 	print("oeffne mit telnetlib ", host, ":", port)
 	telnet = telnetlib.Telnet()
 	telnet.open(host, port, 3)
@@ -824,6 +875,7 @@ def yeelight_set_ct_abx(ct):
 # --set_power ------------------
 # turn yeelight lamp on or off
 def yeelight_set_power(power):
+	global yeelightid
 	'''
 	if "0" != str(power) and "off" != str(power): #request.form["powertext"]:
 		params = '"on", "smooth", 500'

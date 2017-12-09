@@ -7,7 +7,7 @@
             font-family: "Helvetica-Neue" Helvetica;
             }
         .textsql{
-			position:	absolute;
+			position:	relative;
 			top:		20%;
             left:       5%;
             right:      0;
@@ -25,21 +25,114 @@
 			display:	block;
 			width:		80%;
 		}
+		.hideit{
+			display:	none;
+		}
     </style>
 
 {% endblock %}
 
 {% block body %}
 	{{ super() }}
+	<div class="col-sm bg-secondary">
+	
 	{% autoescape false %}
 	<p class="bg-warning"> {{ result }} </p>
 	{% endautoescape %}
 	<form action="/dbgui" method="POST" >
-		<button type="hidden" name="result" value="{{ result }}"/>
-		<button type="submit" name="createtableorte" class="Input" value="create table orte">create table orte</button>
-		<button type="submit" name="showtables" class="Input" value="showtables">show tables</button><br>
-		<button type="submit" name="showpublictables" class="Input" value="showpublictables">show public tables</button><br>
-		<input type="textarea" name="sqlquery" class="textsql" value="{{ sqlquery }}"/>
-		<button type="submit" name="execquery" class="Input" value="execquery">exec query</button>
+		<button type="hidden" name="result" class="hideit" value="{{ result }}"/>
+		<button type="submit" name="createtableort" class="btn btn-info" value="create table ort">create table ort</button>
+		<button type="submit" name="showtables" class="btn btn-info" value="showtables">show tables</button>
+		<button type="submit" name="showpublictables" class="btn btn-info" value="showpublictables">show public tables</button>
+		<button type="submit" name="execquery" class="btn btn-secondary" value="execquery">exec query</button><br>
+		<input type="textarea" name="sqlquery" class="textsql rounded" value="{{ sqlquery }}"/>
 	</form>
+
+	<table class="table-bordered table-dark rounded">
+	<td>
+	<table class="table table-striped table-dark rounded">
+	  <thead>
+		<tr>
+		{% for listitem in tableort %}
+		  <th scope="col"> {{ listitem }} </th>
+		{% endfor %}  
+		</tr>
+	  </thead>
+	  <tbody>
+		{% for rows in tableortcontent 	%}
+		<tr>
+			{% 	for listitem in rows	%}
+		  <td scope="row"> {{ listitem }} </td>
+			{% endfor %}  
+		</tr>
+		{% endfor %}  
+	  </tbody>
+	</table>
+
+	</td>
+	<td>
+	<table class="table table-striped table-dark rounded">
+	  <thead>
+		<tr>
+		{% for listitem in tablehersteller %}
+		  <th scope="col"> {{ listitem }} </th>
+		{% endfor %}  
+		</tr>
+	  </thead>
+	  <tbody>
+		{% for rows in tableherstellercontent 	%}
+		<tr>
+			{% 	for listitem in rows	%}
+		  <td scope="row"> {{ listitem }} </td>
+			{% endfor %}  
+		</tr>
+		{% endfor %}  
+	  </tbody>
+	</table>
+
+	</td>
+	<td>
+	<table class="table table-striped table-dark rounded">
+	  <thead>
+		<tr>
+		{% for listitem in tabledialogflow %}
+		  <th scope="col"> {{ listitem }} </th>
+		{% endfor %}  
+		</tr>
+	  </thead>
+	  <tbody>
+		{% for rows in tabledialogflowcontent 	%}
+		<tr>
+			{% 	for listitem in rows	%}
+		  <td scope="row"> {{ listitem }} </td>
+			{% endfor %}  
+		</tr>
+		{% endfor %}  
+	  </tbody>
+	</table>
+
+	</td>
+	<tr>
+	<table class="table table-striped table-dark rounded">
+	  <thead>
+		<tr>
+		{% for listitem in tabledevices %}
+		  <th scope="col"> {{ listitem }} </th>
+		{% endfor %}  
+		</tr>
+	  </thead>
+	  <tbody>
+		{% for rows in tabledevicescontent 	%}
+		<tr>
+			{% 	for listitem in rows	%}
+		  <td scope="row"> {{ listitem }} </td>
+			{% endfor %}  
+		</tr>
+		{% endfor %}  
+	  </tbody>
+	</table>
+	</tr>
+	</table>
+	
+	</div>
 {% endblock %}
